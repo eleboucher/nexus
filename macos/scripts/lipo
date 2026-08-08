@@ -3,11 +3,13 @@
 # stay read-only, so lipo can't write its temporary output file when Flutter
 # thins FlutterMacOS.framework during the build. Make the framework writable
 # before delegating to the real lipo.
+echo "lipo shim invoked with: $*" >&2
 for arg in "$@"; do
   case "$arg" in
     */*.framework/*)
       fw_dir="${arg%.framework/*}.framework"
-      chmod -R +w "$fw_dir" 2>/dev/null
+      echo "lipo shim: chmod -R +w $fw_dir" >&2
+      chmod -R +w "$fw_dir"
       ;;
   esac
 done
