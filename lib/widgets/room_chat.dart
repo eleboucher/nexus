@@ -467,6 +467,8 @@ class RoomChat extends HookConsumerWidget {
                           AsyncData(:final value?) ||
                           AsyncLoading(:final value?) => CustomScrollView(
                             controller: scrollController,
+                            keyboardDismissBehavior:
+                                ScrollViewKeyboardDismissBehavior.onDrag,
                             slivers: [
                               SliverToBoxAdapter(
                                 child: Padding(
