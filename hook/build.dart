@@ -28,11 +28,7 @@ Future<void> main(List<String> args) => build(args, (input, output) async {
       final iosConfig = codeConfig.iOS;
       iosSdk = iosConfig.targetSdk;
       final minVersion = iosConfig.targetVersion;
-      iosSdkPath = (await Process.run("xcrun", [
-        "--sdk",
-        iosSdk.type,
-        "--show-sdk-path",
-      ])).stdout.toString().trim();
+      iosSdkPath = await getXCodeSDK(sdkType: iosSdk.type);
       final archTriple = switch (targetArch) {
         Architecture.arm64 => "arm64",
         Architecture.x64 => "x86_64",
@@ -45,12 +41,7 @@ Future<void> main(List<String> args) => build(args, (input, output) async {
           : "$archTriple-apple-ios$minVersion.0";
       extraEnv = {
         "GOOS": "ios",
-        "CC": (await Process.run("xcrun", [
-          "--sdk",
-          iosSdk.type,
-          "-f",
-          "clang",
-        ])).stdout.toString().trim(),
+        "CC": await getXCodeClang(sdkType: iosSdk.type),
         "CGO_CFLAGS": "-isysroot $iosSdkPath -target $iosTargetTriple",
         "CGO_LDFLAGS": "-isysroot $iosSdkPath -target $iosTargetTriple",
       };
