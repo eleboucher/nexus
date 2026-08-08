@@ -1,22 +1,14 @@
 import "dart:io";
 
-Future<String> _runXcrun(List<String> args, String errorContext) async {
-  final result = await Process.run("xcrun", args);
+Future<String> getXCodeTool({String? sdkType, String? findTool}) async {
+  final result = await Process.run("xcrun", [
+    if (sdkType != null) ...["--sdk", sdkType],
+    if (findTool != null) ...["-f", findTool] else "--show-sdk-path",
+  ]);
 
   if (result.exitCode != 0) {
-    throw Exception("Failed to $errorContext\n${result.stderr}");
+    throw Exception("Failed to run xcrun\n${result.stderr}");
   }
 
   return result.stdout.toString().trim();
 }
-
-Future<String> getXCodeSDK({String? sdkType}) => _runXcrun([
-  if (sdkType != null) ...["--sdk", sdkType],
-  "--show-sdk-path",
-], "get XCode SDK");
-
-Future<String> getXCodeClang({String? sdkType}) => _runXcrun([
-  if (sdkType != null) ...["--sdk", sdkType],
-  "-f",
-  "clang",
-], "get XCode clang");

@@ -28,7 +28,7 @@ Future<void> main(List<String> args) => build(args, (input, output) async {
       final iosConfig = codeConfig.iOS;
       iosSdk = iosConfig.targetSdk;
       final minVersion = iosConfig.targetVersion;
-      iosSdkPath = await getXCodeSDK(sdkType: iosSdk.type);
+      iosSdkPath = await getXCodeTool(sdkType: iosSdk.type);
       final archTriple = switch (targetArch) {
         Architecture.arm64 => "arm64",
         Architecture.x64 => "x86_64",
@@ -41,14 +41,14 @@ Future<void> main(List<String> args) => build(args, (input, output) async {
           : "$archTriple-apple-ios$minVersion.0";
       extraEnv = {
         "GOOS": "ios",
-        "CC": await getXCodeClang(sdkType: iosSdk.type),
+        "CC": await getXCodeTool(sdkType: iosSdk.type, findTool: "clang"),
         "CGO_CFLAGS": "-isysroot $iosSdkPath -target $iosTargetTriple",
         "CGO_LDFLAGS": "-isysroot $iosSdkPath -target $iosTargetTriple",
       };
       break;
     case OS.macOS:
       libFileName = "libgomuks.dylib";
-      extraEnv = {"SDKROOT": await getXCodeSDK()};
+      extraEnv = {"SDKROOT": await getXCodeTool()};
       break;
     case OS.windows:
       libFileName = "libgomuks.dll";
