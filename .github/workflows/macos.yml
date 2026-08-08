@@ -32,6 +32,12 @@ jobs:
             FLUTTER_ROOT="$(dirname "$(dirname "$(readlink -f "$(command -v flutter)")")")"
             sudo find -L "$FLUTTER_ROOT" -type d -iname "*.framework" -exec chmod -R u+w {} +
 
+            # Xcode/SPM pick up nix devshell'"'"'s compiler env vars (NIX_LDFLAGS
+            # etc.) and mangle them into malformed -Xlinker chains.
+            echo "--- flag-related env vars before unset ---"
+            env | grep -iE "ldflags|cflags|cppflags" || true
+            unset LDFLAGS CFLAGS CXXFLAGS CPPFLAGS NIX_LDFLAGS NIX_CFLAGS_COMPILE NIX_CFLAGS_LINK
+
             flutter build macos --release
           '
 
