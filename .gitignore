@@ -42,3 +42,6 @@ password.txt
 
 # Nix
 /result
+
+# Local IPA builds
+*.ipa

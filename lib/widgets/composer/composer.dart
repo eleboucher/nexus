@@ -234,7 +234,10 @@ class Composer extends HookConsumerWidget {
                                   child: TextField(
                                     maxLines: 12,
                                     minLines: 1,
-                                    autofocus: true,
+                                    autofocus:
+                                        Platform.isLinux ||
+                                        Platform.isMacOS ||
+                                        Platform.isWindows,
                                     decoration: .new(
                                       hintText: "Your message here...",
                                       border: .none,
