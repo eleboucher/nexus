@@ -13,9 +13,47 @@ Future<void> main(List<String> args) => build(args, (input, output) async {
 
   String libFileName;
   Map<String, String> extraEnv = {};
+  IOSSdk? iosSdk;
+  String? iosSdkPath;
+  String? iosTargetTriple;
   switch (targetOS) {
     case OS.linux:
       libFileName = "libgomuks.so";
+      break;
+    case OS.iOS:
+      // Go only supports buildmode=c-archive for ios, not c-shared, so the
+      // archive built below gets linked into a dylib via a separate clang
+      // invocation before being registered as a normal asset like macOS.
+      libFileName = "libgomuks.dylib";
+      final iosConfig = codeConfig.iOS;
+      iosSdk = iosConfig.targetSdk;
+      final minVersion = iosConfig.targetVersion;
+      iosSdkPath = (await Process.run("xcrun", [
+        "--sdk",
+        iosSdk.type,
+        "--show-sdk-path",
+      ])).stdout.toString().trim();
+      final archTriple = switch (targetArch) {
+        Architecture.arm64 => "arm64",
+        Architecture.x64 => "x86_64",
+        _ => throw UnsupportedError(
+          "Unsupported iOS architecture: $targetArch",
+        ),
+      };
+      iosTargetTriple = iosSdk == IOSSdk.iPhoneSimulator
+          ? "$archTriple-apple-ios$minVersion.0-simulator"
+          : "$archTriple-apple-ios$minVersion.0";
+      extraEnv = {
+        "GOOS": "ios",
+        "CC": (await Process.run("xcrun", [
+          "--sdk",
+          iosSdk.type,
+          "-f",
+          "clang",
+        ])).stdout.toString().trim(),
+        "CGO_CFLAGS": "-isysroot $iosSdkPath -target $iosTargetTriple",
+        "CGO_LDFLAGS": "-isysroot $iosSdkPath -target $iosTargetTriple",
+      };
       break;
     case OS.macOS:
       libFileName = "libgomuks.dylib";
@@ -86,15 +124,26 @@ Future<void> main(List<String> args) => build(args, (input, output) async {
     final tags = [
       "sqlite_fts5",
       "goolm",
-      // goheif/dav1d is not supported on Android, would need to be fixed upstream
-      if (targetOS == OS.android) "noheic",
+      // goheif/dav1d is not supported on Android or iOS, would need to be fixed upstream
+      if (targetOS == OS.android || targetOS == OS.iOS) "noheic",
     ].join(",");
+
+    final archiveFile = targetOS == OS.iOS
+        ? buildDir.resolve("${targetArch.name}/libgomuks.a")
+        : libFile;
     print(
-      "Building Gomuks shared library $libFileName (${targetOS.name}/${targetArch.name}) to ${libFile.path}...",
+      "Building Gomuks shared library $libFileName (${targetOS.name}/${targetArch.name}) to ${archiveFile.path}...",
     );
     final result = await Process.run(
       "go",
-      ["build", "-tags", tags, "-o", libFile.path, "-buildmode=c-shared"],
+      [
+        "build",
+        "-tags",
+        tags,
+        "-o",
+        archiveFile.path,
+        "-buildmode=${targetOS == OS.iOS ? "c-archive" : "c-shared"}",
+      ],
       workingDirectory: gomuksBuildDir.resolve("pkg/ffi/").toFilePath(),
       environment: {
         "CGO_ENABLED": "1",
@@ -113,6 +162,35 @@ Future<void> main(List<String> args) => build(args, (input, output) async {
       throw Exception(
         "Failed to build Gomuks shared library\n${result.stderr}",
       );
+    }
+
+    if (targetOS == OS.iOS) {
+      print("Linking $archiveFile into $libFile...");
+      final linkResult = await Process.run("xcrun", [
+        "--sdk",
+        iosSdk!.type,
+        "clang",
+        "-dynamiclib",
+        "-isysroot",
+        iosSdkPath!,
+        "-target",
+        iosTargetTriple!,
+        "-install_name",
+        "@rpath/libgomuks.dylib",
+        "-framework",
+        "Security",
+        "-framework",
+        "CoreFoundation",
+        "-framework",
+        "SystemConfiguration",
+        "-force_load",
+        archiveFile.path,
+        "-o",
+        libFile.path,
+      ]);
+      if (linkResult.exitCode != 0) {
+        throw Exception("Failed to link Gomuks dylib\n${linkResult.stderr}");
+      }
     }
   }
 
