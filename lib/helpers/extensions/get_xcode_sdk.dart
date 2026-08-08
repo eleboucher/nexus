@@ -7,7 +7,7 @@ Future<String> getXCodeTool({String? sdkType, String? findTool}) async {
   ]);
 
   if (result.exitCode != 0) {
-    throw Exception("Failed to run xcrun\n${result.stderr}");
+    throw Exception("Failed to get ${sdkType ?? "XCode"} ${findTool ?? "SDK"}");
   }
 
   return result.stdout.toString().trim();
