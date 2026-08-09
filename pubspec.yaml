@@ -4,6 +4,8 @@ version: 0.1.0
 publish_to: none
 
 flutter:
+  config:
+    enable-swift-package-manager: false
   fonts:
     - family: fallback-emoji
       fonts:

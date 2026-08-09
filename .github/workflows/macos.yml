@@ -32,13 +32,6 @@ jobs:
             FLUTTER_ROOT="$(dirname "$(dirname "$(readlink -f "$(command -v flutter)")")")"
             sudo find -L "$FLUTTER_ROOT" -type d -iname "*.framework" -exec chmod -R u+w {} +
 
-            # Same root cause as the lipo issue above: nix devshell puts its own
-            # cctools-binutils-darwin ld ahead of Apple'"'"'s on PATH. SPM invokes
-            # ld directly (not through clang), and nix'"'"'s ld does not understand
-            # -Xlinker as a passthrough token the way Apple'"'"'s does, so it chokes
-            # on Xcode-generated flags. Put Apple'"'"'s toolchain first.
-            export PATH="/usr/bin:$(xcode-select -p)/usr/bin:$PATH"
-
             flutter build macos --release
           '
 
