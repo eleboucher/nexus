@@ -32,8 +32,18 @@ jobs:
             FLUTTER_ROOT="$(dirname "$(dirname "$(readlink -f "$(command -v flutter)")")")"
             sudo find -L "$FLUTTER_ROOT" -type d -iname "*.framework" -exec chmod -R u+w {} +
 
-            flutter build ios --release --no-codesign
+            dirname "$(readlink -f "$(command -v flutter)")" > /tmp/flutter_bin_dir
+            dirname "$(readlink -f "$(command -v go)")" > /tmp/go_bin_dir
           '
+
+          # Run the actual Xcode build outside the nix shell: nix injects
+          # compiler env vars (NIX_LDFLAGS etc.) that corrupt Xcode/CocoaPods'
+          # own linker invocations into malformed -Xlinker chains.
+          FLUTTER_BIN_DIR="$(cat /tmp/flutter_bin_dir)"
+          GO_BIN_DIR="$(cat /tmp/go_bin_dir)"
+          env -i HOME="$HOME" USER="$USER" TMPDIR="$TMPDIR" \
+            PATH="$FLUTTER_BIN_DIR:$GO_BIN_DIR:$(xcode-select -p)/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin" \
+            flutter build ios --release --no-codesign
 
       # Unsigned IPA: SideStore/AltStore re-sign this on-device with the
       # user's own Apple ID at install time, so no certificate is needed here.
