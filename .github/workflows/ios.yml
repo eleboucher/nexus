@@ -23,6 +23,8 @@ jobs:
 
       - name: Build app
         run: |
+          POD_BIN_DIR="$(dirname "$(command -v pod)")"
+
           nix develop --command bash -c '
             set -e
             flutter pub get
@@ -42,7 +44,7 @@ jobs:
           FLUTTER_BIN_DIR="$(cat /tmp/flutter_bin_dir)"
           GO_BIN_DIR="$(cat /tmp/go_bin_dir)"
           env -i HOME="$HOME" USER="$USER" TMPDIR="$TMPDIR" \
-            PATH="$FLUTTER_BIN_DIR:$GO_BIN_DIR:$(xcode-select -p)/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin" \
+            PATH="$FLUTTER_BIN_DIR:$GO_BIN_DIR:$POD_BIN_DIR:$(xcode-select -p)/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin" \
             flutter build ios --release --no-codesign
 
       # Unsigned IPA: SideStore/AltStore re-sign this on-device with the
