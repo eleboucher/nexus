@@ -32,12 +32,12 @@ jobs:
             FLUTTER_ROOT="$(dirname "$(dirname "$(readlink -f "$(command -v flutter)")")")"
             sudo find -L "$FLUTTER_ROOT" -type d -iname "*.framework" -exec chmod -R u+w {} +
 
-            # Xcode/SPM pick up nix devshell'"'"'s compiler env vars (NIX_LDFLAGS
-            # etc.) and mangle them into malformed -Xlinker chains. unset alone
-            # does not survive: flutter'"'"'s Nix wrapper re-injects them via
-            # --set-default, which only skips vars that are already present
-            # (even if empty) - so set them empty instead of unsetting.
-            export LDFLAGS= CFLAGS= CXXFLAGS= CPPFLAGS= NIX_LDFLAGS= NIX_CFLAGS_COMPILE= NIX_CFLAGS_LINK=
+            # Same root cause as the lipo issue above: nix devshell puts its own
+            # cctools-binutils-darwin ld ahead of Apple'"'"'s on PATH. SPM invokes
+            # ld directly (not through clang), and nix'"'"'s ld does not understand
+            # -Xlinker as a passthrough token the way Apple'"'"'s does, so it chokes
+            # on Xcode-generated flags. Put Apple'"'"'s toolchain first.
+            export PATH="/usr/bin:$(xcode-select -p)/usr/bin:$PATH"
 
             flutter build macos --release
           '
